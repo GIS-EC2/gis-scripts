@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraCatastrophe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 10px;
+        }
+        .title {
+            color: #0F9ED5;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .subtitle {
+            color: gray;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .container {
+            text-align: center;
+            margin-top: 50px;
+        }
+        .step-container {
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .step-container .step-text {
+            color: black;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .custom-file-label {
+            background-color: #DAE9F8;
+            color: #0F9ED5;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            display: inline-block;
+            z-index: 0;
+        }
+        .custom-file-label:hover {
+            background-color: #c9dff5;
+        }
+        .textbox {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 200px;
+        }
+        .button {
+            background-color: #DAE9F8;
+            color: #0F9ED5;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .button:hover {
+            background-color: #c9dff5;
+        }
+        .cancel-button {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            display: inline-block;
+            margin-left: 20px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .cancel-button:hover {
+            background-color: #f5c6cb;
+        }
+        /* Loading Screen Styles */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+            display: none; /* Initially hidden */
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .spinner {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #3498db;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-message {
+            margin-top: 20px;
+            font-size: 20px;
+            color: #0F9ED5;
+        }
+        /* Flash Messages Styles */
+        .flash-messages {
+            color: green;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen Overlay -->
+    <div id="loading-overlay">
+        <div>
+            <div class="spinner"></div>
+            <div class="loading-message">Processing... Please wait.</div>
+        </div>
+    </div>
+
+    <div class="header">
+        <div class="title">UltraCatastrophe</div>
+        <div class="subtitle">For XYZ Insurance</div>
+    </div>
+
+    <div class="container">
+        <!-- Flash Messages -->
+        <div class="flash-messages" id="flash-messages"></div>
+
+        <!-- Form to upload CSV, input file name, and generate output -->
+        <form id="upload-form" action="/" method="post" enctype="multipart/form-data">
+            <!-- Step 1 -->
+            <div class="step-container">
+                <div class="step-text">Step 1</div>
+                <div class="file-input-wrapper">
+                    <input type="file" name="file" accept=".csv" required>
+                    <span class="custom-file-label">Upload CSV</span>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-container">
+                <div class="step-text">Step 2</div>
+                <input type="text" name="output_filename" class="textbox" placeholder="Enter file name" required>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-container">
+                <div class="step-text">Step 3</div>
+                <button type="submit" class="button">GENERATE</button>
+                <button type="button" class="cancel-button" id="cancel-button" disabled>CANCEL</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const flashMessages = document.getElementById('flash-messages');
+        const cancelButton = document.getElementById('cancel-button');
+        let xhr;  // Variable to store the XMLHttpRequest object
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the form from submitting immediately
+            loadingOverlay.style.display = 'flex'; // Show the loading screen
+
+            // Enable the cancel button
+            cancelButton.disabled = false;
+            cancelButton.style.opacity = 1;
+            cancelButton.style.pointerEvents = 'auto';
+
+            const formData = new FormData(form);
+
+            // Create a new XMLHttpRequest object
+            xhr = new XMLHttpRequest();
+
+            xhr.open('POST', '/', true);
+            xhr.onload = function() {
+                loadingOverlay.style.display = 'none'; // Hide the loading screen
+
+                // Disable the cancel button
+                cancelButton.disabled = true;
+                cancelButton.style.opacity = 0.5;
+                cancelButton.style.pointerEvents = 'none';
+
+                if (xhr.status === 200) {
+                    flashMessages.textContent = 'Report has been created successfully!';
+                    flashMessages.style.color = 'green';
+                } else {
+                    flashMessages.textContent = 'An error occurred while generating the report.';
+                    flashMessages.style.color = 'red';
+                }
+            };
+            xhr.send(formData);
+        });
+
+        // Cancel the request if the cancel button is clicked
+        cancelButton.addEventListener('click', function() {
+            if (xhr) {
+                xhr.abort(); // Abort the current XMLHttpRequest
+                loadingOverlay.style.display = 'none'; // Hide the loading screen
+                flashMessages.textContent = 'Process has been canceled.';
+                flashMessages.style.color = 'red';
+
+                // Disable the cancel button
+                cancelButton.disabled = true;
+                cancelButton.style.opacity = 0.5;
+                cancelButton.style.pointerEvents = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
